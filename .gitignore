@@ -89,3 +89,5 @@ ENV/
 .ropeproject
 
 .idea/
+# local testing script used before I add some unit tests
+localtest.py
