@@ -45,7 +45,7 @@ class DeliveryClient(object):
         data = kwargs
         data['client_id'] = self.client_id
         data['sender_id'] = self.sender_id
-        secret_string = "".join([str(data[key]) for key in sorted(data)]) + secret_key
+        secret_string = "".join([str(data[key]) for key in sorted(data) if data[key]]) + secret_key
         data['secret_key'] = md5(secret_string.encode('utf-8')).hexdigest()
 
         response = requests.post("/".join([self.API_URL, self.API_VERSION, method]),
@@ -71,3 +71,47 @@ class DeliveryClient(object):
             dict: инормация о складе из аккаунта
         """
         return self.request("getSenderInfo", warehouse_id=warehouse_id)
+
+    def get_requisite_info(self, requisite_id):
+        """
+        http://docs.yandexdelivery.apiary.io/#reference/0/getrequisiteinfo/.
+        Args:
+            requisite_id (int): Идентификатор реквизитов магазина из аккаунта в сервисе
+
+        Returns:
+            dict: Получение информации о реквизитах магазина из аккаунта в сервисе.
+        """
+        return self.request("getRequisiteInfo", requisite_id=requisite_id)
+
+    def autocomplete(self, term, complete_type="address", locality_name=None, geo_id=None, street=None):
+        """
+        Args:
+            term (str): Часть адреса для последующего автодополнения
+            complete_type (str): Тип автодополнения
+            locality_name (str): Название города. Обязательный параметр, если type=street или type=house
+            geo_id (int): Идентификатор локации. Аналог locality_name. Обязательный параметр, если type=street
+                или type=house и не указан locality_name.
+            street (str): Название улицы. Обязательный параметр, если type=house.
+        Returns:
+            dict: Автоматическое дополнение названий города, улицы и дома.
+        Raises:
+
+        """
+        if (complete_type == "street" or complete_type == "house") and not (geo_id or locality_name):
+            raise AttributeError("Type '%s' requires geo_id or locality_name keyword arguments" % complete_type)
+        if complete_type == "house" and not street:
+            raise AttributeError("Type '%s' requires street keyword argument" % complete_type)
+
+        return self.request("autocomplete", term=term, type=complete_type, locality_name=locality_name,
+                            geo_id=geo_id, street=street)
+
+    def get_index(self, address):
+        """
+        http://docs.yandexdelivery.apiary.io/#reference/0/getindex/.
+        Args:
+            address (str): Введенный адрес
+
+        Returns:
+            dict: индекс
+        """
+        return self.request("getIndex", address=address)
