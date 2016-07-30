@@ -2,6 +2,7 @@ import requests
 from .exceptions import *
 from hashlib import md5
 
+
 # Original API description: http://docs.yandexdelivery.apiary.io/
 
 
@@ -115,3 +116,41 @@ class DeliveryClient(object):
             dict: индекс
         """
         return self.request("getIndex", address=address)
+
+    def search_delivery_list(self, city_from, city_to, weight, width, height, length,
+                             geo_id_to=None, geo_id_from=None, delivery_type=None, total_cost=None,
+                             index_city=None, to_yd_warehouse=None, order_cost=None, assessed_value=None):
+        """
+
+        Args:
+            city_from (str): Обязательное поле. Город, из которого осуществляется доставка
+            city_to (str): Обязательное поле. Город, в который осуществляется доставка
+            weight (float): Обязательное поле. Вес посылки, в кг.
+            width (int): Обязательное поле. Высота посылки, в см.
+            height (int): Обязательное поле. Ширина посылки, в см.
+            length (int): Обязательное поле. Длина посылки, в см.
+            geo_id_to (str): Идентификатор города, в который осуществляется доставка. В случае,
+                когда указаны оба параметра (city_to и geo_id_to) больший приоритет имеет geo_id_to
+            geo_id_from (str): Идентификатор города, из которого осуществляется доставка. В случае, когда указаны
+                оба параметра (city_from и geo_id_from) больший приоритет имеет geo_id_from
+            delivery_type (str): Тип доставки: курьером до двери либо в пункт выдачи заказов. Если тип не указан,
+                будут загружены все варианты.
+            total_cost (float): Общая стоимость отправления, в руб. При передаче будут автоматически рассчитано кассовое
+                обслуживание.
+            order_cost (float): Стоимость товарных позиций, в руб. При передаче будут применены правила редактора тарифов,
+                зависящие от стоимости заказа.
+            assessed_value (float): Объявленная ценность отправления, в руб. При передаче будут автоматически рассчитана
+                страховка, а также применены правила редактора тарифов.
+            index_city (int): Индекс получателя. Будут отфильтрованы службы, которые не осуществляют доставку по данному
+                индексу.
+            to_yd_warehouse (int): Тип отгрузки: напрямую в службу доставки или через единый склад
+
+        Returns:
+
+        """
+        return self.request("searchDeliveryList", city_from=city_from, city_to=city_to, weight=weight, width=width, height=height,
+                            length=length,
+                            geo_id_to=geo_id_to, geo_id_from=geo_id_from, delivery_type=delivery_type,
+                            total_cost=total_cost,
+                            index_city=index_city, to_yd_warehouse=to_yd_warehouse, order_cost=order_cost,
+                            assessed_value=assessed_value)
