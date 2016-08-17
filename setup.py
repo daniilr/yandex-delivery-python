@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='yandex-delivery',
     packages=['yandex_delivery'],
-    version='0.0.1',
+    version='0.0.2',
     description='Yandex Delivery python client (python-клиент «Яндекс.Доставик»',
     long_description=open('DESCRIPTION.rst').read(),
     license='MIT License',

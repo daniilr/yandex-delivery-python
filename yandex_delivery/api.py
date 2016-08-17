@@ -1,3 +1,8 @@
+import collections
+import json
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+
 import requests
 from .exceptions import *
 from hashlib import md5
@@ -29,6 +34,37 @@ class DeliveryClient(object):
         self.requisite_id = requisite_id
         self.method_keys = method_keys
 
+    def get_values(self, data):
+        if type(data) == list:
+            return "".join([self.get_values(key) for key in data if key])
+        if type(data) is not dict:
+            return str(data)
+        return "".join([self.get_values(data[key]) for key in sorted(data) if data[key]])
+
+    def http_build_query(self, params, convention="%s"):
+
+        if len(params) == 0:
+            return ""
+
+        output = ""
+        for key in params.keys():
+            if type(params[key]) is dict:
+                output = output + self.http_build_query(params[key], convention % key + "[%s]")
+            elif type(params[key]) is list:
+                i = 0
+                new_params = {}
+                for element in params[key]:
+                    new_params[str(i)] = element
+                    i += 1
+                output += self.http_build_query(
+                    new_params, convention % key + "[%s]")
+            else:
+                key = quote(key)
+                val = quote(str(params[key]))
+                output = output + convention % key + "=" + val + "&"
+
+        return output
+
     def request(self, method, **kwargs):
         """
 
@@ -46,11 +82,14 @@ class DeliveryClient(object):
         data = kwargs
         data['client_id'] = self.client_id
         data['sender_id'] = self.sender_id
-        secret_string = "".join([str(data[key]) for key in sorted(data) if data[key]]) + secret_key
+        secret_string = self.get_values(data) + secret_key
         data['secret_key'] = md5(secret_string.encode('utf-8')).hexdigest()
+        data = dict((k, v) for k, v in data.items() if v)
 
-        response = requests.post("/".join([self.API_URL, self.API_VERSION, method]),
-                                 data, headers={'User-Agent': self.USER_AGENT}).json()
+        req = Request("/".join([self.API_URL, self.API_VERSION, method]), self.http_build_query(data).encode(),
+                      headers={'User-Agent': self.USER_AGENT})
+        response = json.loads(urlopen(req).read().decode())
+
         if response["status"] == "error":
             raise ClientException("client responded with error %s. \nFull output: %s" % (response["error"], response))
         return response
@@ -148,9 +187,36 @@ class DeliveryClient(object):
         Returns:
 
         """
-        return self.request("searchDeliveryList", city_from=city_from, city_to=city_to, weight=weight, width=width, height=height,
+        return self.request("searchDeliveryList", city_from=city_from, city_to=city_to, weight=weight, width=width,
+                            height=height,
                             length=length,
                             geo_id_to=geo_id_to, geo_id_from=geo_id_from, delivery_type=delivery_type,
                             total_cost=total_cost,
                             index_city=index_city, to_yd_warehouse=to_yd_warehouse, order_cost=order_cost,
                             assessed_value=assessed_value)
+
+    def create_order(self, recipient_first_name, recipient_middle_name, recipient_last_name,
+                     recipient_phone, recipient_email, order_weight, order_length, order_num,
+                     order_assessed_value, order_amount_prepaid, order_delivery_cost, is_manual_delivery_cost,
+                     deliverypoint_city, deliverypoint_street, deliverypoint_house, deliverypoint_index,
+                     delivery_delivery, delivery_direction, delivery_tariff, delivery_pickuppoint=None,
+                     delivery_to_yd_warehouse=1, delivery_interval=None, order_items=[],
+                     deliverypoint_housing="", deliverypoint_build="",
+                     deliverypoint_flat="", deliverypoint_geo_id=None, order_comment=""
+                     ):
+        return self.request("createOrder", recipient_first_name=recipient_first_name,
+                            recipient_middle_name=recipient_middle_name,
+                            recipient_last_name=recipient_last_name, recipient_phone=recipient_phone,
+                            recipient_email=recipient_email, order_weight=order_weight, order_length=order_length,
+                            order_num=order_num, order_assessed_value=order_assessed_value,
+                            order_amount_prepaid=order_amount_prepaid, order_delivery_cost=order_delivery_cost,
+                            is_manual_delivery_cost=is_manual_delivery_cost, deliverypoint_city=deliverypoint_city,
+                            deliverypoint_street=deliverypoint_street, deliverypoint_house=deliverypoint_house,
+                            deliverypoint_index=deliverypoint_index, delivery_delivery=delivery_delivery,
+                            delivery_direction=delivery_direction, delivery_tariff=delivery_tariff,
+                            delivery_pickuppoint=delivery_pickuppoint,
+                            delivery_to_yd_warehouse=delivery_to_yd_warehouse, delivery_interval=delivery_interval,
+                            order_items=order_items, deliverypoint_housing=deliverypoint_housing,
+                            deliverypoint_build=deliverypoint_build, deliverypoint_flat=deliverypoint_flat,
+                            deliverypoint_geo_id=deliverypoint_geo_id, order_comment=order_comment,
+                            order_requisite=self.requisite_id, order_warehouse=self.warehouse_ids)
